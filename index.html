@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavenColonial Build Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 8px 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 1em;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        #output-section {
+            display: none;
+        }
+
+        #output-box {
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 200px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+            resize: vertical;
+            white-space: pre;
+        }
+
+        .copy-btn {
+            margin-top: 8px;
+            background: #2196F3;
+        }
+
+        .copy-btn:hover {
+            background: #1976D2;
+        }
+
+        #status {
+            color: #c00;
+            margin-bottom: 10px;
+            min-height: 1.2em;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>RavenColonial Build Converter</h1>
+    <div class="input-row">
+        <input type="text" id="build-input" placeholder="Paste build URL or build ID" />
+        <button onclick="loadBuild()">Load</button>
+    </div>
+    <div id="status"></div>
+    <div id="output-section">
+        <textarea id="output-box" readonly></textarea>
+        <button class="copy-btn" onclick="copyOutput()">Copy to Clipboard</button>
+    </div>
+
+    <script>
+        function extractBuildId(input) {
+            input = input.trim();
+            const match = input.match(/build=([\w-]+)/);
+            return match ? match[1] : input;
+        }
+
+        function loadBuild() {
+            const raw = document.getElementById('build-input').value;
+            const buildId = extractBuildId(raw);
+            const status = document.getElementById('status');
+            const section = document.getElementById('output-section');
+
+            if (!buildId) {
+                status.textContent = 'Please enter a valid build URL or build ID.';
+                return;
+            }
+
+            status.textContent = 'Loading...';
+            section.style.display = 'none';
+
+            const apiUrl = `https://ravencolonial100-awcbdvabgze4c5cq.canadacentral-01.azurewebsites.net/api/project/${buildId}`;
+
+            fetch(apiUrl)
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    return r.json();
+                })
+                .then(data => {
+                    const commodities = data && data.commodities && typeof data.commodities === 'object'
+                        ? Object.entries(data.commodities)
+                        : [];
+
+                    if (commodities.length === 0) {
+                        status.textContent = `No commodities found for build ID: ${buildId}`;
+                        return;
+                    }
+
+                    const lines = commodities.map(([name, amount]) => `${amount} , ${name}`);
+                    document.getElementById('output-box').value = lines.join('\n');
+                    status.textContent = '';
+                    section.style.display = 'block';
+                })
+                .catch(err => {
+                    status.textContent = `Failed to load build: ${err.message}`;
+                });
+        }
+
+        function copyOutput() {
+            const box = document.getElementById('output-box');
+            box.select();
+            document.execCommand('copy');
+        }
+
+        document.getElementById('build-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') loadBuild();
+        });
+    </script>
+</body>
+
+</html>
